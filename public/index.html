@@ -6,9 +6,9 @@
 </head>
 <body>
   <h2>Seu Assistente Nutricional</h2>
-  <form id="form" enctype="multipart/form-data">
-    <input type="text" id="pergunta" name="message" placeholder="Digite sua pergunta..." required />
-    <input type="file" id="arquivo" name="pdf" accept="application/pdf" required />
+  <form id="form">
+    <input type="text" id="pergunta" placeholder="Digite sua pergunta..." required />
+    <input type="file" id="arquivo" accept="application/pdf" required />
     <button type="submit">Enviar</button>
   </form>
   <pre id="resposta"></pre>
@@ -17,23 +17,28 @@
     const form = document.getElementById('form');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData();
-      formData.append('message', document.getElementById('pergunta').value);
-      formData.append('pdf', document.getElementById('arquivo').files[0]);
 
-      const respostaBox = document.getElementById('resposta');
-      respostaBox.textContent = 'Aguarde...';
+      const formData = new FormData();
+      const pergunta = document.getElementById('pergunta').value;
+      const arquivo = document.getElementById('arquivo').files[0];
+
+      if (!pergunta || !arquivo) {
+        document.getElementById('resposta').textContent = 'Campos ausentes';
+        return;
+      }
+
+      formData.append('message', pergunta);
+      formData.append('pdf', arquivo);
 
       try {
         const res = await fetch('/api/chat', {
           method: 'POST',
           body: formData
         });
-
         const data = await res.json();
-        respostaBox.textContent = data.resposta || data.error || 'Erro ao obter resposta';
+        document.getElementById('resposta').textContent = data.resposta || data.error || 'Erro';
       } catch (e) {
-        respostaBox.textContent = 'Erro ao enviar dados';
+        document.getElementById('resposta').textContent = 'Erro ao enviar dados';
       }
     });
   </script>

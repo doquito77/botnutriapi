@@ -1,37 +1,39 @@
-import { IncomingForm } from 'formidable';
-import { readFileSync } from 'fs';
-import { OpenAI } from 'openai';
+// ==========================
+// BACKEND: /api/chat.js
+// ==========================
 
 export const config = {
   api: {
-    bodyParser: false
-  }
+    bodyParser: false,
+  },
 };
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import formidable from 'formidable';
+import fs from 'fs';
+import { OpenAI } from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+    return res.status(405).send('Método não permitido');
   }
 
-  const form = new IncomingForm({ keepExtensions: true });
-  
+  const form = new formidable.IncomingForm();
+
   form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: 'Erro ao processar formulário' });
+    if (err) return res.status(500).json({ error: 'Erro ao processar dados' });
 
-    const mensagem = fields.message;
-    const pdf = files.pdf;
+    const userMessage = fields.message?.[0];
+    const pdf = files.pdf?.[0];
 
-    if (!mensagem || !pdf) {
+    if (!userMessage || !pdf) {
       return res.status(400).json({ error: 'Campos ausentes' });
     }
 
     try {
-      const upload = await openai.files.create({
-        file: readFileSync(pdf.filepath),
+      const fileUpload = await openai.files.create({
+        file: fs.createReadStream(pdf.filepath),
         purpose: 'assistants'
       });
 
@@ -39,8 +41,8 @@ export default async function handler(req, res) {
 
       await openai.beta.threads.messages.create(thread.id, {
         role: 'user',
-        content: mensagem[0],
-        file_ids: [upload.id]
+        content: userMessage,
+        file_ids: [fileUpload.id]
       });
 
       const run = await openai.beta.threads.runs.create(thread.id, {
@@ -49,18 +51,18 @@ export default async function handler(req, res) {
 
       let status;
       do {
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 1500));
         const check = await openai.beta.threads.runs.retrieve(thread.id, run.id);
         status = check.status;
       } while (status !== 'completed');
 
-      const msgs = await openai.beta.threads.messages.list(thread.id);
-      const reply = msgs.data?.[0]?.content?.[0]?.text?.value || 'Sem resposta';
+      const messages = await openai.beta.threads.messages.list(thread.id);
+      const resposta = messages.data?.[0]?.content?.[0]?.text?.value || 'Sem resposta';
 
-      res.status(200).json({ resposta: reply });
+      return res.status(200).json({ resposta });
     } catch (e) {
       console.error(e);
-      res.status(500).json({ error: 'Falha ao consultar assistente' });
+      return res.status(500).json({ error: 'Falha ao consultar assistente' });
     }
   });
 }

@@ -1,5 +1,14 @@
 {
+  "functions": {
+    "api/chat.js": {
+      "memory": 512,
+      "maxDuration": 30
+    }
+  },
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/chat.js" }
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/chat.js"
+    }
   ]
 }

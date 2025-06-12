@@ -6,10 +6,11 @@
 </head>
 <body>
   <h2>Seu Assistente Nutricional</h2>
-  <form id="form">
-    <input type="text" id="pergunta" placeholder="Digite sua pergunta..." required />
-    <input type="file" id="arquivo" accept="application/pdf" required />
-    <button type="submit">Enviar</button>
+ <form id="form" enctype="multipart/form-data">
+  <input type="text" id="pergunta" name="message" placeholder="Digite sua pergunta..." required />
+  <input type="file" id="arquivo" name="pdf" accept="application/pdf" required />
+  <button type="submit">Enviar</button>
+</form>="submit">Enviar</button>
   </form>
   <pre id="resposta"></pre>
 

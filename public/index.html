@@ -1,11 +1,50 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Botnutri Online</title>
+  <title>Chatbot Nutricional</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; background: #f9f9f9; }
+    input, button { padding: 10px; font-size: 16px; margin-top: 10px; }
+    #chatbox { margin-top: 20px; border: 1px solid #ccc; padding: 15px; min-height: 200px; background: #fff; }
+    .user { color: blue; margin-bottom: 5px; }
+    .bot { color: green; margin-bottom: 15px; }
+  </style>
 </head>
 <body>
-  <h1>Seu chatbot está online.</h1>
+  <h2>Seu Assistente Nutricional</h2>
+  <input type="text" id="userInput" placeholder="Digite sua pergunta..." style="width: 80%;" />
+  <button onclick="sendMessage()">Enviar</button>
+
+  <div id="chatbox"></div>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const chatbox = document.getElementById("chatbox");
+      const userText = input.value.trim();
+
+      if (!userText) return;
+
+      chatbox.innerHTML += '<div class="user"><strong>Você:</strong> ' + userText + '</div>';
+      input.value = "";
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userText })
+        });
+
+        const data = await res.json();
+        chatbox.innerHTML += '<div class="bot"><strong>Bot:</strong> ' + data.reply + '</div>';
+        chatbox.scrollTop = chatbox.scrollHeight;
+      } catch (err) {
+        chatbox.innerHTML += '<div class="bot"><strong>Erro:</strong> falha na resposta</div>';
+      }
+    }
+  </script>
 </body>
 </html>

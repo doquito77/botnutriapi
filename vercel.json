@@ -1,8 +1,5 @@
-// 3. /vercel.json
-/*
 {
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/chat.js" }
   ]
 }
-*/

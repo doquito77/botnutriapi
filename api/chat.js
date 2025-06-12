@@ -1,47 +1,63 @@
-// /api/chat.js
+// 1. /api/chat.js (backend)
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+import formidable from 'formidable';
+import fs from 'fs';
+import { OpenAI } from 'openai';
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).send('Método não permitido');
   }
 
-  try {
-    const { message } = req.body;
+  const form = new formidable.IncomingForm();
+  form.parse(req, async (err, fields, files) => {
+    if (err) return res.status(500).json({ error: 'Erro ao processar formulário' });
 
-    if (!message || message.trim() === '') {
-      return res.status(400).json({ error: 'Mensagem vazia' });
+    const userMessage = fields.message?.[0] || '';
+    const pdfFile = files.pdf?.[0];
+
+    try {
+      // Faz upload do PDF pra OpenAI
+      const uploaded = await openai.files.create({
+        file: fs.createReadStream(pdfFile.filepath),
+        purpose: 'assistants'
+      });
+
+      // Cria thread e envia mensagem
+      const thread = await openai.beta.threads.create();
+      await openai.beta.threads.messages.create(thread.id, {
+        role: 'user',
+        content: userMessage,
+        file_ids: [uploaded.id]
+      });
+
+      // Chama o assistant com base no ID real
+      const run = await openai.beta.threads.runs.create(thread.id, {
+        assistant_id: 'asst_FLd5GRKGj4Eyhi2DrgnMAMo9'
+      });
+
+      // Aguarda finalização da resposta
+      let status;
+      do {
+        await new Promise((r) => setTimeout(r, 1500));
+        const check = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+        status = check.status;
+      } while (status !== 'completed');
+
+      const messages = await openai.beta.threads.messages.list(thread.id);
+      const resposta = messages.data[0]?.content[0]?.text?.value || 'Sem resposta';
+
+      res.status(200).json({ resposta });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ error: 'Falha ao consultar assistente' });
     }
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um assistente nutricional direto, objetivo, profissional e com linguagem clara. Fale em português.',
-          },
-          {
-            role: 'user',
-            content: message,
-          },
-        ],
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!data.choices || !data.choices[0].message) {
-      throw new Error('Resposta inesperada da OpenAI');
-    }
-
-    res.status(200).json({ reply: data.choices[0].message.content });
-  } catch (err) {
-    console.error('[API] Erro:', err);
-    res.status(500).json({ error: 'Erro ao buscar resposta' });
-  }
+  });
 }

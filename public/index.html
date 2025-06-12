@@ -1,10 +1,8 @@
-// 2. /public/index.html
-/*
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Seu Assistente Nutricional</title>
+  <title>Assistente Nutricional</title>
 </head>
 <body>
   <h2>Seu Assistente Nutricional</h2>
@@ -23,15 +21,21 @@
       formData.append('message', document.getElementById('pergunta').value);
       formData.append('pdf', document.getElementById('arquivo').files[0]);
 
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        body: formData
-      });
+      const respostaBox = document.getElementById('resposta');
+      respostaBox.textContent = 'Aguarde...';
 
-      const data = await res.json();
-      document.getElementById('resposta').textContent = data.resposta || 'Erro';
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        respostaBox.textContent = data.resposta || data.error || 'Erro ao obter resposta';
+      } catch (e) {
+        respostaBox.textContent = 'Erro ao enviar dados';
+      }
     });
   </script>
 </body>
 </html>
-*/
